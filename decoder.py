@@ -87,8 +87,8 @@ def beam_decode(model, src_ids, src_ids_cp, src_lengths, max_len = MAX_TRG_LENGT
 
   # Storage
   best_trellis = prev_y.unsqueeze(1) # [bs * k, 1] - will vary in size over loop
-  current_scores = torch.zeros(beam_size * bs, device = device)
-  final_pred = torch.zeros(bs, seq_len, device = device)
+  current_scores = torch.zeros(beam_size * bs, device = DEVICE)
+  final_pred = torch.zeros(bs, seq_len, device = DEVICE)
 
   # Decoding loop (this is where bs = 1 assumption kicks in; else loop through bs and apply update_y)
   for i in range(max_len - 1):

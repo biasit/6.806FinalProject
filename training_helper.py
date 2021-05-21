@@ -31,7 +31,9 @@ def create_glove_embeddings():
         curr_emb = np.array(line[1:]).astype(np.float)
         glove_dict[curr_w] = curr_emb
     return glove_dict
-
+def split_camelcase(wd):
+  wd_split = re.sub( r"([A-Z])", r" \1", wd).split()
+  return [subwd.lower() for subwd in wd_split]
 # Initialize GloVe embeddings for a vocabulary
 def glove_init(vocab, v2id):
   glove_dict = create_glove_embeddings()
@@ -66,6 +68,7 @@ def glove_init(vocab, v2id):
 
 def get_glove_embeddings(train_set):
     ''' Get glove embeddings for vocabulary '''
+    data_dir='./model_input'
     src_embedding_path = os.path.join(data_dir, "src_embedding.pkl")
     trg_embedding_path = os.path.join(data_dir, "trg_embedding.pkl")
 
@@ -78,7 +81,7 @@ def get_glove_embeddings(train_set):
             src_embed = pickle.load(f)
 
     if not os.path.exists(trg_embedding_path):
-        trg_embed, trg_mismatch = glove_init(train_set.trg_vocab, train_set.trg_v2id, glove_dict)
+        trg_embed, trg_mismatch = glove_init(train_set.trg_vocab, train_set.trg_v2id)
         with open(trg_embedding_path,"wb") as f:
             pickle.dump(trg_embed, f)
     else:
@@ -108,13 +111,6 @@ class SimpleLossCompute:
       loss.backward()
       torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm) # added for numerical stability
       self.opt.step()
-
-      # Examine gradients for divergence (https://discuss.pytorch.org/t/how-can-i-get-the-gradients-of-the-weights-of-each-layer/28502)
-      if grad_verbose:
-        for param, weight in copynet.named_parameters():
-          if "bias" not in param:
-            print('===========\ngradient:{}\n----------\n{}'.format(param, torch.all(torch.isnan(weight.grad))))
-
       self.opt.zero_grad()
 
     return loss.data.item() * norm
@@ -129,10 +125,10 @@ def run_epoch(data_loader, model, loss_compute, print_every, save_every, save_na
   total_loss = 0
 
   for i, (src_ids_BxT, src_lengths_B, src_ids_cp_BxT, trg_ids_BxL, trg_lengths_B) in enumerate(data_loader):
-    src_ids_BxT = src_ids_BxT.to(device)
-    src_lengths_B = src_lengths_B.to(device)
-    src_ids_cp_BxT = src_ids_cp_BxT.to(device)
-    trg_ids_BxL = trg_ids_BxL.to(device)
+    src_ids_BxT = src_ids_BxT.to(DEVICE)
+    src_lengths_B = src_lengths_B.to(DEVICE)
+    src_ids_cp_BxT = src_ids_cp_BxT.to(DEVICE)
+    trg_ids_BxL = trg_ids_BxL.to(DEVICE)
 
     del trg_lengths_B   # unused
 

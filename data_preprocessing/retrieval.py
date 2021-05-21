@@ -1,6 +1,7 @@
 import numpy as np
 import os
-from ../global_variables import *
+from ..global_variables import *
+
 def get_embeddings(src_sentences):
     '''!pip install -U sentence-transformers'''
     # Download the pretrained model
@@ -28,7 +29,7 @@ def get_most_similar_trg_sentences(train_embeddings, embeddings, from_src=None):
     from tqdm import tqdm
     tr_embeddings_norm = np.expand_dims(np.linalg.norm(train_embeddings, axis=1),1)
 
-    # similarity coeffs
+    # similarity coeffs based on cosine distance
     best_indexes = np.zeros(len(embeddings))
 
     batch_s = 5000

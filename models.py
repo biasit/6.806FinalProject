@@ -130,13 +130,13 @@ class Decoder(nn.Module):
     # Initialize state and attention if start token (MAY NEED TO MOVE STUFF TO GPU)
     if prev_state is None or context is None:
       final_encoded = encoded[:, -1, :] # [bs, 2 * h]
-      prev_state = self.bridge(final_encoded).to(device) # [bs, h]
-      context = torch.zeros((bs, 1, 2 * hidden_size), device = device) # [bs, 1, 2 * h]
+      prev_state = self.bridge(final_encoded).to(DEVICE) # [bs, h]
+      context = torch.zeros((bs, 1, 2 * hidden_size), device = DEVICE) # [bs, 1, 2 * h]
 
     prev_state = prev_state.unsqueeze(0) # [1, bs, h], 1 due to num_layers * num_direction parameter
 
     # Update GRU state
-    input_embed = self.trg_embed(input_idx).unsqueeze(1).to(device) # [bs, 1, embed_size]
+    input_embed = self.trg_embed(input_idx).unsqueeze(1).to(DEVICE) # [bs, 1, embed_size]
     gru_input = torch.cat([input_embed, context], dim = 2) # [bs, 1, embed_size + 2 * h]
     _, s_t = self.gru(gru_input, prev_state) # [1, bs, h]
     s_t = s_t.squeeze(0) # [bs, h] WAS s_t.squeeze() - changed so that bs of 1 isn't messed up
@@ -167,7 +167,7 @@ class Decoder(nn.Module):
     V = self.vocab_size
     context = None
     s_t = None
-    outputs = torch.zeros((bs, max_len, V), device = device)
+    outputs = torch.zeros((bs, max_len, V), device = DEVICE)
 
     # Pre-computing things in the encoder (for memory/computational efficiency)
     encoder_attention_scores = self.tanh(self.Wa(encoded)) # [bs, seq_len, hidden_size]
@@ -199,7 +199,7 @@ class CopyNetDecoder(nn.Module):
         - `vocab_size`: an int representing baseline vocab size
         - `max_oovs`: an int representing the maximum number of OOVS to be seen at testing time
     """
-    super(Decoder, self).__init__()
+    super(CopyNetDecoder, self).__init__()
 
     # Setup
     self.vocab_size = vocab_size
@@ -238,7 +238,7 @@ class CopyNetDecoder(nn.Module):
     prob_c = prob_concat[:, self.vocab_size:]
 
     # Expand prob_g with some dummy terms
-    oovs = torch.zeros(encoder_scores.size(0), self.max_oovs, device = device) + 1e-4 # 0 probabilities cause issues for NLLloss! Subtract off a large number if on log scale
+    oovs = torch.zeros(encoder_scores.size(0), self.max_oovs, device = DEVICE) + 1e-4 # 0 probabilities cause issues for NLLloss! Subtract off a large number if on log scale
     prob_g = torch.cat([prob_g, oovs], 1) # [bs, V + |X|]
 
     return prob_g, prob_c
@@ -264,7 +264,7 @@ class CopyNetDecoder(nn.Module):
     bs, seq_len = encoded_idx.size()
 
     # Loop through to check which indices are relevant: take copy weights from those
-    relevant_idx = torch.zeros((bs, seq_len), device = device)
+    relevant_idx = torch.zeros((bs, seq_len), device = DEVICE)
     for i in range(bs):
       relevant_idx[i, :] = 1 * (encoded_idx[i, :] == input_idx[i])
 
@@ -296,13 +296,13 @@ class CopyNetDecoder(nn.Module):
     # Initialize state and attention if start token (MAY NEED TO MOVE STUFF TO GPU)
     if prev_state is None or context is None:
       final_encoded = encoded[:, -1, :] # [bs, 2 * h]
-      prev_state = self.bridge(final_encoded).to(device) # [bs, h]
-      context = torch.zeros((bs, 1, 2 * hidden_size), device = device) # [bs, 1, 2 * h]
+      prev_state = self.bridge(final_encoded).to(DEVICE) # [bs, h]
+      context = torch.zeros((bs, 1, 2 * hidden_size), device = DEVICE) # [bs, 1, 2 * h]
 
     prev_state = prev_state.unsqueeze(0) # [1, bs, h], 1 due to num_layers * num_direction parameter
 
     # Update GRU state
-    input_embed = self.trg_embed(input_idx).unsqueeze(1).to(device) # [bs, 1, embed_size]
+    input_embed = self.trg_embed(input_idx).unsqueeze(1).to(DEVICE) # [bs, 1, embed_size]
     gru_input = torch.cat([input_embed, context], dim = 2) # [bs, 1, embed_size + 2 * h]
     _, s_t = self.gru(gru_input, prev_state) # [1, bs, h]
     s_t = s_t.squeeze(0) # [bs, h] WAS s_t.squeeze() - changed so that bs of 1 isn't messed up
@@ -331,7 +331,7 @@ class CopyNetDecoder(nn.Module):
     V = self.vocab_size
     context = None
     s_t = None
-    outputs = torch.zeros((bs, max_len, V + self.max_oovs), device = device)
+    outputs = torch.zeros((bs, max_len, V + self.max_oovs), device = DEVICE)
 
     # Pre-computing things in the encoder (for memory/computational efficiency)
     encoded_ohe = F.one_hot(encoded_idx, num_classes = V + self.max_oovs).float()
@@ -353,7 +353,7 @@ class CopyNetDecoderWithAttention(nn.Module):
         - `vocab_size`: an int representing baseline vocab size
         - `max_oovs`: an int representing the maximum number of OOVS to be seen at testing time
     """
-    super(Decoder, self).__init__()
+    super(CopyNetDecoderWithAttention, self).__init__()
 
     # Setup
     self.vocab_size = vocab_size
@@ -394,7 +394,7 @@ class CopyNetDecoderWithAttention(nn.Module):
     prob_c = prob_concat[:, self.vocab_size:]
 
     # Expand prob_g with some dummy terms
-    oovs = torch.zeros(encoder_scores.size(0), self.max_oovs, device = device) + 1e-4 # 0 probabilities cause issues for NLLloss! Subtract off a large number if on log scale
+    oovs = torch.zeros(encoder_scores.size(0), self.max_oovs, device = DEVICE) + 1e-4 # 0 probabilities cause issues for NLLloss! Subtract off a large number if on log scale
     prob_g = torch.cat([prob_g, oovs], 1) # [bs, V + |X|]
 
     return prob_g, prob_c
@@ -446,13 +446,13 @@ class CopyNetDecoderWithAttention(nn.Module):
     # Initialize state and attention if start token (MAY NEED TO MOVE STUFF TO GPU)
     if prev_state is None or context is None:
       final_encoded = encoded[:, -1, :] # [bs, 2 * h]
-      prev_state = self.bridge(final_encoded).to(device) # [bs, h]
-      context = torch.zeros((bs, 1, 2 * hidden_size), device = device) # [bs, 1, 2 * h]
+      prev_state = self.bridge(final_encoded).to(DEVICE) # [bs, h]
+      context = torch.zeros((bs, 1, 2 * hidden_size), device = DEVICE) # [bs, 1, 2 * h]
 
     prev_state = prev_state.unsqueeze(0) # [1, bs, h], 1 due to num_layers * num_direction parameter
 
     # Update GRU state
-    input_embed = self.trg_embed(input_idx).unsqueeze(1).to(device) # [bs, 1, embed_size]
+    input_embed = self.trg_embed(input_idx).unsqueeze(1).to(DEVICE) # [bs, 1, embed_size]
     gru_input = torch.cat([input_embed, context], dim = 2) # [bs, 1, embed_size + 2 * h]
     _, s_t = self.gru(gru_input, prev_state) # [1, bs, h]
     s_t = s_t.squeeze(0) # [bs, h] WAS s_t.squeeze() - changed so that bs of 1 isn't messed up
@@ -488,7 +488,7 @@ class CopyNetDecoderWithAttention(nn.Module):
     V = self.vocab_size
     context = None
     s_t = None
-    outputs = torch.zeros((bs, max_len, V + self.max_oovs), device = device)
+    outputs = torch.zeros((bs, max_len, V + self.max_oovs), device = DEVICE)
 
     # Pre-computing things in the encoder (for memory/computational efficiency)
     encoded_ohe = F.one_hot(encoded_idx, num_classes = V + self.max_oovs).float()
@@ -517,7 +517,7 @@ class CopyNetDecoderWithAttention(nn.Module):
 # Generic combination of Encoder-Decoder
 class Seq2Seq(nn.Module):
   def __init__(self, encoder, decoder):
-    super(CopyNet, self).__init__()
+    super(Seq2Seq, self).__init__()
 
     self.encoder = encoder
     self.decoder = decoder
@@ -533,7 +533,7 @@ class Seq2Seq(nn.Module):
     return self.decode(trg_seq[:, :-1], encoded, encoded_idx_cp, max_len) # taking off last token from HW3
 
 
-### Below is deprected code for a Transformer Encoder 
+### Below is deprected code for a Transformer Encoder
 class CustomTransformerEncoder(nn.Module):
     def __init__(self, embed_size=50, nheads=2, nlayers=6, vocab_size=500, max_input_length=700):
         super(CustomTransformerEncoder, self).__init__()
@@ -545,8 +545,8 @@ class CustomTransformerEncoder(nn.Module):
         self.max_input_length = max_input_length
 
         self.pos_encoder = PositionalEncoding(self.embed_size, max_len=self.max_input_length)
-        self.t_layer = TransformerEncoderLayer(self.embed_size, self.nheads)
-        self.transformer_encoder = TransformerEncoder(self.t_layer, self.nlayers)
+        self.t_layer = nn.TransformerEncoderLayer(self.embed_size, self.nheads)
+        self.transformer_encoder = nn.TransformerEncoder(self.t_layer, self.nlayers)
 
     def forward(self, src, lengths):
         # input should be:
@@ -556,7 +556,7 @@ class CustomTransformerEncoder(nn.Module):
         # same outputs as the HW2 encoder from above
 
         # get correct mask
-        src_mask = src.float().masked_fill(src == PAD_INDEX, float('-inf')).masked_fill(src != PAD_INDEX, 0.).to(device)
+        src_mask = src.float().masked_fill(src == PAD_INDEX, float('-inf')).masked_fill(src != PAD_INDEX, 0.).to(DEVICE)
 
         src = self.src_embed(src) # [batch_size x max_seq_len x embed_size]
 
@@ -568,7 +568,7 @@ class CustomTransformerEncoder(nn.Module):
         output = self.transformer_encoder(src, src_mask) # [max_seq_len x batch_size x encoding_dim]
         output = output.transpose(0,1)                   # [batch_size x max_seq_len x encoding_dim]
         # final_output = torch.max(output, dim=1)[0].squeeze() # [batch_size x encoding_dim]
-        final_output = torch.zeros(len(lengths), self.embed_size).to(device)
+        final_output = torch.zeros(len(lengths), self.embed_size).to(DEVICE)
         for i in range(len(lengths)):
             final_output[i] = output[i,lengths[i]-1]
         return output, final_output
