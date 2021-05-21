@@ -57,14 +57,13 @@ def update_y(current_score, out_probs, best_trellis, init = False):
 
 # Beam search (https://blog.ceshine.net/post/implementing-beam-search-part-1/#how-to-do-beam-search-efficiently)
 # Note: I've assumed that bs = 1 here. The modification for bigger batches is straightforward, but the EOS exit condition means there likely won't be a gain in speed.
-
 @torch.no_grad()
 def beam_decode(model, src_ids, src_ids_cp, src_lengths, max_len = MAX_TRG_LENGTH, beam_size = 5):
   """Beam search decode a *single* sentence for CopyNet. Make sure to chop off the EOS token!"""
 
   # Setup and pre-computation
   bs, seq_len = src_ids.size() # bs = 1 everywhere
-  
+
   if bs != 1:
     print("Warning: currently assumes batch_size = 1")
 
@@ -93,7 +92,7 @@ def beam_decode(model, src_ids, src_ids_cp, src_lengths, max_len = MAX_TRG_LENGT
 
   # Decoding loop (this is where bs = 1 assumption kicks in; else loop through bs and apply update_y)
   for i in range(max_len - 1):
-    out_probs, prev_state, context, _ = model.decoder.forward_step(prev_y, encoded, src_ids_cp, src_ids_cp_ohe, encoder_scores, 
+    out_probs, prev_state, context, _ = model.decoder.forward_step(prev_y, encoded, src_ids_cp, src_ids_cp_ohe, encoder_scores,
                                                                 pad_mask, prev_state, context)
     out_probs = out_probs.reshape(-1) # [k * V']
 

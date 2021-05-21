@@ -22,7 +22,7 @@ from global_variables import *
 class Encoder(nn.Module):
   def __init__(self, vocab_size, embed_size, hidden_size, max_src_length = MAX_SRC_LENGTH):
     """
-    Inputs: 
+    Inputs:
       - `vocab_size`: an int representing vocabulary size.
       - `embed_size`: an int representing embedding side (in *each* direction!).
       - `hidden_size`: an int representing the RNN hidden size.
@@ -30,7 +30,7 @@ class Encoder(nn.Module):
     super(Encoder, self).__init__()
 
     self.src_embed = nn.Embedding(vocab_size, embed_size)
-    self.rnn = nn.GRU(embed_size, hidden_size, num_layers = 1, batch_first = True, bidirectional = True) 
+    self.rnn = nn.GRU(embed_size, hidden_size, num_layers = 1, batch_first = True, bidirectional = True)
     self.max_src_length = max_src_length
 
   def forward(self, inputs, lengths):
@@ -50,19 +50,18 @@ class Encoder(nn.Module):
     """
     lengths = lengths.cpu()
     inputs = self.src_embed(inputs) # [bs, seq_len, embed_size]
-    packed_input = torch.nn.utils.rnn.pack_padded_sequence(inputs, lengths, 
-                                                           batch_first=True, 
+    packed_input = torch.nn.utils.rnn.pack_padded_sequence(inputs, lengths,
+                                                           batch_first=True,
                                                            enforce_sorted=False)
     packed_outputs, h_n = self.rnn(packed_input) # second is [2, bs, hidden_size], first is packed
     outputs = torch.nn.utils.rnn.pad_packed_sequence(packed_outputs, batch_first = True, total_length = self.max_src_length)[0] # [bs, seq_len, 2 * hidden_size]
-    
+
     return outputs, h_n
 
 
 
-# TOM: if you have time, please add flags and incorporate the other models here
-# Decoder with copy mechanism and attention
-# This implementation is heavily modeled off of: https://github.com/mjc92/CopyNet/blob/9e7f277e34208f871d449e3292ef24ad502b0d34/170704/copynet_dbg.py#L8 
+# CopyNet Decoder
+# This implementation is heavily modeled off of: https://github.com/mjc92/CopyNet/blob/9e7f277e34208f871d449e3292ef24ad502b0d34/170704/copynet_dbg.py#L8
 class Decoder(nn.Module):
   def __init__(self, vocab_size, embed_size, hidden_size, max_oovs = MAX_SRC_LENGTH):
     """
@@ -82,7 +81,7 @@ class Decoder(nn.Module):
     self.bridge = nn.Linear(2 * hidden_size, hidden_size, bias=False) # bridge from bidirectional GRU to unidirectional (maybe won't be 2 * hidden_size for comp. purposes)
     self.trg_embed = nn.Embedding(vocab_size, embed_size)
     self.gru = nn.GRU(embed_size + 2 * hidden_size, hidden_size, batch_first=True) # 2 * hidden_size comes from attention - input to GRU is [embed; context]
-    
+
     # Copy and attention weights
     self.Wg = nn.Linear(hidden_size, vocab_size) # generate weight (to apply to GRU state)
     self.Wo = nn.Linear(2 * hidden_size, hidden_size) # copy weight (to apply to encoder hidden state via quadratic form)
@@ -96,7 +95,7 @@ class Decoder(nn.Module):
     # encoder_scores: [bs, seq_len, hidden_size]  <- precomputed encoder scores (with Wo)
     # pad_mask: [bs, seq_len]  <- precomputed pad mask for encoder
     # s_t: [bs, h]  <- squeezed output of GRU at time t
-    
+
     # First pass calculation
     psi_g = self.Wg(s_t) # [bs, V]
     psi_c = torch.bmm(encoder_scores, s_t.unsqueeze(2)).squeeze(2) # [bs, seq_len] WAS ordinary squeeze
@@ -111,18 +110,18 @@ class Decoder(nn.Module):
     # Expand prob_g with some dummy terms
     oovs = torch.zeros(encoder_scores.size(0), self.max_oovs, device = device) + 1e-4 # 0 probabilities cause issues for NLLloss! Subtract off a large number if on log scale
     prob_g = torch.cat([prob_g, oovs], 1) # [bs, V + |X|]
-    
+
     return prob_g, prob_c
 
   def combine_copy_gen(self, prob_g, prob_c, encoded_ohe): # used to pass in encoded_idx
     """
       Use encoded_idx (TODO: make compatible with target vocabulary) and copy/generated scores to get [bs, |V| + |X|] size vector of scores.
-      |X| is the size of the unique additional vocabulary for that batch. 
+      |X| is the size of the unique additional vocabulary for that batch.
       Since we need to add the probabilities, we'll need to apply a log_softmax - we can then use np.logsumexp for numerically stable addition.
       The implementation above uses a bunch of OHE pushing - should be similar.
       Proposal: have a separate part of the batch with "unique" identifiers.
     """
-    
+
     # OHE encoding and scattering scores
     prob_c_to_g = torch.bmm(prob_c.unsqueeze(dim = 1), encoded_ohe) # [bs, 1, V + |X|]
     prob_c_to_g = prob_c_to_g.squeeze(1) # [bs, V + |X|]
@@ -143,7 +142,7 @@ class Decoder(nn.Module):
     copy_weight = relevant_idx * prob_c # [bs, sl]
     copy_weight = F.normalize(copy_weight, p = 1, dim = 1) # row-normalize copy weights
     copy_weight = copy_weight.unsqueeze(dim = 1) # [bs, 1, sl]
-    
+
     return torch.bmm(copy_weight, encoded) # [bs, 1, 2 * h]
 
   def forward_step(self, input_idx, encoded, encoded_idx, encoded_ohe, encoder_scores, pad_mask, prev_state = None, context = None):
@@ -153,7 +152,7 @@ class Decoder(nn.Module):
       - encoded_idx: [bs, seq_len]  <- indices passed into encoder
       - encoded_ohe: [bs, seq_len, V + |X|]  <- pre-computed OHE source indices
       - encoder_scores: [bs, seq_len, hidden_size]  <- pre-computed encoder scores to dot product with decoder hidden state
-      - pad_mask: [bs, seq_len]  <- pre-computed pad mask 
+      - pad_mask: [bs, seq_len]  <- pre-computed pad mask
       - prev_state: [1, bs, h]  <- previous hidden state
       - context: [bs, 1, 2 * h]  <- context vector computed using attention-like idea
     """

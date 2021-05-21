@@ -86,7 +86,7 @@ def load_data(data_dir, data_src_path, data_trg_path, get_vocab = True):
 
     return data_src, add_start_eos(data_trg), src_vocab, trg_vocab
 
-  
+
 ## Data Class
 
 # Create our Dataset (largely taken from PSet 3 of 6.806)
@@ -100,8 +100,8 @@ class DataflowDataset(torch.utils.data.Dataset):
 
         self.src_vocab = src_vocab | set(SAVED_INDEXES.keys())
         self.trg_vocab = trg_vocab | set(SAVED_INDEXES.keys())
-        
-        both_src_trg_vocab = self.src_vocab & self.trg_vocab 
+
+        both_src_trg_vocab = self.src_vocab & self.trg_vocab
         self.src_v2id = {}
         self.trg_v2id = {}
         # add in SAVED INDEXES
@@ -113,15 +113,15 @@ class DataflowDataset(torch.utils.data.Dataset):
         for v in sorted(list(both_src_trg_vocab - set(SAVED_INDEXES.keys()))):
             self.src_v2id[v] = len(self.src_v2id)
             self.trg_v2id[v] = len(self.trg_v2id)
-          
+
         # finish up src vocab
         for v in sorted(list(self.src_vocab - both_src_trg_vocab)):
             self.src_v2id[v] = len(self.src_v2id)
-        
+
         # finish up trg vocab
         for v in sorted(list(self.trg_vocab - both_src_trg_vocab)):
             self.trg_v2id[v] = len(self.trg_v2id)
-        
+
         self.src_id2v = {val : key for key, val in self.src_v2id.items()}
         self.trg_id2v = {val : key for key, val in self.trg_v2id.items()}
 
@@ -140,11 +140,11 @@ class DataflowDataset(torch.utils.data.Dataset):
         src_len = len(self.src_sentences[index])
         trg_len = len(self.trg_sentences[index])
         src_id = self.src_idx(index)
-        
+
         src_copy_idx, trg_id = self.copy_idx(index)
 
         return torch.tensor(src_id), src_len, torch.tensor(src_copy_idx), torch.tensor(trg_id), trg_len
-    
+
     def src_idx(self, index):
         src_sent = self.src_sentences[index]
         src_len = len(src_sent)
@@ -156,11 +156,11 @@ class DataflowDataset(torch.utils.data.Dataset):
             src_id.append(self.src_v2id[w])
         src_id += [PAD_INDEX] * (self.max_src_seq_length - src_len)
         return src_id
-    
+
     def convert_from_copy_trg_vocab_to_orig(self, index, sentence):
         """
             Sentence: target sentence ids
-            If you have a sentence that is a list of target ids and want the 
+            If you have a sentence that is a list of target ids and want the
             original target tokens, use this function.
             Index should be the corresponding index for the instance level
             vocab that you will use.
@@ -171,7 +171,7 @@ class DataflowDataset(torch.utils.data.Dataset):
         next_idx = len(self.trg_vocab)
         for w in src_sent:
             if w not in self.trg_vocab and w not in new_term_dict:
-                new_term_dict[w] = next_idx 
+                new_term_dict[w] = next_idx
                 next_idx += 1
         rev_new_term_dict = {val: key for key, val in new_term_dict.items()} # id to v
 
@@ -184,7 +184,7 @@ class DataflowDataset(torch.utils.data.Dataset):
             else:
                 ret_sent.append(UNK_TOKEN)
         return ret_sent
-    
+
     def convert_from_src_sent_to_input(self, src_sent):
         src_len = len(src_sent)
 
@@ -217,7 +217,7 @@ class DataflowDataset(torch.utils.data.Dataset):
         """
             Src Sent: original src sentence from which expanded vocabulary is created
             Sentence: target sentence ids
-            If you have a sentence that is a list of target ids and want the 
+            If you have a sentence that is a list of target ids and want the
             original target tokens, use this function.
             Src_sent should be the corresponding source sentence from which
             copy indices were generated. This should be tokenized list!
@@ -227,7 +227,7 @@ class DataflowDataset(torch.utils.data.Dataset):
         next_idx = len(self.trg_vocab)
         for w in src_sent:
             if w not in self.trg_vocab and w not in new_term_dict:
-                new_term_dict[w] = next_idx 
+                new_term_dict[w] = next_idx
                 next_idx += 1
         rev_new_term_dict = {val: key for key, val in new_term_dict.items()} # id to v
 
@@ -243,7 +243,7 @@ class DataflowDataset(torch.utils.data.Dataset):
 
     def copy_idx(self, index):
         """
-            Generate indices based on expanded vocabulary for copying. 
+            Generate indices based on expanded vocabulary for copying.
         """
         src_sent = self.src_sentences[index]
         src_len = len(src_sent)
@@ -277,7 +277,7 @@ class DataflowDataset(torch.utils.data.Dataset):
                     trg_id.append(new_term_dict[w])
                 else:
                     w = UNK_TOKEN
-                    trg_id.append(self.trg_v2id[w]) 
+                    trg_id.append(self.trg_v2id[w])
         trg_id += [PAD_INDEX] * (self.max_trg_seq_length - trg_len)
 
         return src_id, trg_id
@@ -297,7 +297,7 @@ class DataflowDataset(torch.utils.data.Dataset):
             all_trg_lengths.append(curr_trg_len)
 
         self.src_ids = torch.cat(all_src)
-        self.src_lens = all_src_lengths 
+        self.src_lens = all_src_lengths
         self.src_copy_ids = torch.cat(all_src_copy_ids)
         self.trg_ids = torch.cat(all_trg)
         self.trg_lens = all_trg_lengths
