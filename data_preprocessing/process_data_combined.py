@@ -311,7 +311,7 @@ DataflowRetrievalDataset = type('DataflowRetrievalDataset',
                                 DataflowDataset.__bases__, dict(DataflowDataset.__dict__))
 
 # Load in dataflow
-def load_dataflow(dataset_path, data_src, data_trg, src_vocab, trg_vocab, retrieval = False):
+def load_dataflow(dataset_path, data_src=None, data_trg=None, src_vocab=None, trg_vocab=None, retrieval = False):
   if not os.path.exists(dataset_path):
     if retrieval:
       dataset = DataflowRetrieval(data_src, src_vocab,
@@ -329,3 +329,50 @@ def load_dataflow(dataset_path, data_src, data_trg, src_vocab, trg_vocab, retrie
         dataset = pickle.load(f)
 
   return dataset
+
+# Create the datasets if necessary
+def main():
+    # Locations of important files
+    data_dir = "./model_input" # where model input is
+    train_data_src_path = os.path.join(data_dir, "train.src_tok")
+    train_data_trg_path = os.path.join(data_dir, "train.tgt")
+    valid_data_src_path = os.path.join(data_dir, "valid.src_tok")
+    valid_data_trg_path = os.path.join(data_dir, "valid.tgt")
+
+    # load in the data
+    train_data_src, train_data_trg, src_vocab, trg_vocab = load_data(data_dir, train_data_src_path,
+                                                                    train_data_trg_path)
+    val_data_src, val_data_trg, _, _ = load_data(data_dir, valid_data_src_path,
+                                                            valid_data_trg_path)
+
+    # clip data to MAX_SRC_LENGTH of 200 and MAX_TRG_LENGTH of 100
+    train_data_src, train_data_trg = drop_longer(train_data_src, train_data_trg)
+    valid_data_src, valid_data_trg = drop_longer(valid_data_src, valid_data_trg)
+
+    # create the original datasets and store them for model usage
+    train_set_path = os.path.join(data_dir,'train_set.pkl')
+    val_set_path = os.path.join(data_dir,'val_set.pkl')
+    _ = load_dataflow(train_set_path, train_data_src, train_data_trg,
+                        src_vocab, trg_vocab)
+    _ = load_dataflow(val_set_path, valid_data_src, valid_data_trg,
+                        src_vocab, trg_vocab)
+
+    # create the retrieval datasets
+    from retrieval import append_retrieved_target
+    train_data_src = append_retrieved_target(train_data_src, train_data_trg, train_data_src, from_train=True)
+    valid_data_src = append_retrieved_target(train_data_src, train_data_trg, valid_data_src)
+
+    train_set_path = os.path.join(data_dir,'train_set_retrieval.pkl')
+    val_set_path = os.path.join(data_dir,'val_set_retrieval.pkl')
+    _ = load_dataflow(train_set_path, train_data_src, train_data_trg,
+                        src_vocab, trg_vocab, retrieval=True)
+    _ = load_dataflow(val_set_path, val_data_src, val_data_trg,
+                        src_vocab, trg_vocab, retrieval=True)
+
+
+
+
+
+
+if __name__ == "__main__":
+    main()

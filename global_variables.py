@@ -28,6 +28,14 @@ SAVED_INDEXES_RETR = {PAD_TOKEN: PAD_INDEX,
                  START_TOKEN: START_INDEX,
                  END_TOKEN: END_INDEX,
                  RETR_TOKEN: RETR_INDEX}
+# Train Hyperparameters
+GLOVE_DIM = 300
+EMBED_SIZE = GLOVE_DIM
+HIDDEN_SIZE = 256
+LEARNING_RATE = 1e-3
+NUM_EPOCHS = 5
+BATCH_SIZE = 64
+MODEL_FOLDER = './train_models/'
 
 # Plotting
 BASE_COLOR = 320 # high activation seems to be ~ 0.8
