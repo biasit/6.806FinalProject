@@ -5,4 +5,4 @@ Tom Biasi, Michael Isakov, and Simeon Radev.
 Please follow main.ipynb for guidance on how to run the code.
 
 Paper associated with code:
-https://drive.google.com/file/d/1QHLb3JLamZ64tyYEBnxQD08Ms4GXsvlQ/view?usp=sharing
+https://github.com/tbiasi/6.806FinalProject/blob/master/isakov-yu-radev-biasi_6_806_Final_Project.pdf
